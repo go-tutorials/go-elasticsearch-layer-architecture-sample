@@ -1,0 +1,19 @@
+server:
+  name: go-elasticsearch-rest-api
+  port: 8080
+
+elastic_search:
+  url: "http://localhost:9200"
+
+log:
+  level: info
+  map:
+    time: "@timestamp"
+    msg: message
+
+middleware:
+  log: true
+  skips: /health
+  request: request
+  response: response
+  size: size
