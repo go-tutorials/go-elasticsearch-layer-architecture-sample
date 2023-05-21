@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/core-go/core"
+	s "github.com/core-go/search"
 	"github.com/gorilla/mux"
 	"net/http"
 	"reflect"
@@ -18,10 +19,16 @@ type UserHandler struct {
 	service  UserService
 	Validate func(context.Context, interface{}) ([]core.ErrorMessage, error)
 	LogError func(context.Context, string, ...map[string]interface{})
+	search      func(context.Context, interface{}, interface{}, int64, int64) (int64, error)
+	paramIndex  map[string]int
+	filterIndex int
 }
 
-func NewUserHandler(service UserService, validate func(context.Context, interface{}) ([]core.ErrorMessage, error), logError func(context.Context, string, ...map[string]interface{})) *UserHandler {
-	return &UserHandler{service: service, Validate: validate, LogError: logError}
+func NewUserHandler(search func(context.Context, interface{}, interface{}, int64, int64) (int64, error), service UserService, validate func(context.Context, interface{}) ([]core.ErrorMessage, error), logError func(context.Context, string, ...map[string]interface{})) *UserHandler {
+	filterType := reflect.TypeOf(UserFilter{})
+	paramIndex := s.BuildParamIndex(filterType)
+	filterIndex := s.FindFilterIndex(filterType)
+	return &UserHandler{service: service, Validate: validate, LogError: logError, search: search, paramIndex: paramIndex, filterIndex: filterIndex}
 }
 
 func (h *UserHandler) All(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +175,19 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	status := GetStatus(res)
 	JSON(w, status, res)
+}
+func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
+	filter := UserFilter{Filter: &s.Filter{}}
+	s.Decode(r, &filter, h.paramIndex, h.filterIndex)
+
+	var users []User
+	offset := s.GetOffset(filter.Limit, filter.Page)
+	total, err := h.search(r.Context(), &filter, &users, filter.Limit, offset)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	JSON(w, 200, &s.Result{List: &users, Total: total})
 }
 
 func JSON(w http.ResponseWriter, code int, res interface{}) error {
