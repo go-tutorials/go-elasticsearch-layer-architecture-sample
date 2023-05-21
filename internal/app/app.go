@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	v "github.com/core-go/core/v10"
 	"github.com/core-go/health"
 	es "github.com/core-go/health/elasticsearch/v7"
 	"github.com/core-go/log"
@@ -20,6 +21,8 @@ type ApplicationContext struct {
 
 func NewApp(ctx context.Context, config Config) (*ApplicationContext, error) {
 	log.Initialize(config.Log)
+	logError := log.LogError
+	validator := v.NewValidator()
 
 	cfg := elasticsearch.Config{Addresses: []string{config.ElasticSearch.Url}}
 
@@ -38,7 +41,7 @@ func NewApp(ctx context.Context, config Config) (*ApplicationContext, error) {
 
 	userRepository := repository.NewUserRepository(client)
 	userService := service.NewUserService(userRepository)
-	userHandler := handler.NewUserHandler(userService)
+	userHandler := handler.NewUserHandler(userService, validator.Validate, logError)
 
 	elasticSearchChecker := es.NewHealthChecker(client)
 	healthHandler := health.NewHandler(elasticSearchChecker)
