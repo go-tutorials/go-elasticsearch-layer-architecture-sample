@@ -3,11 +3,12 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"reflect"
+
 	"github.com/core-go/core"
 	s "github.com/core-go/search"
 	"github.com/gorilla/mux"
-	"net/http"
-	"reflect"
 
 	. "go-service/internal/model"
 	. "go-service/internal/service"
@@ -16,9 +17,9 @@ import (
 const InternalServerError = "Internal Server Error"
 
 type UserHandler struct {
-	service  UserService
-	Validate func(context.Context, interface{}) ([]core.ErrorMessage, error)
-	LogError func(context.Context, string, ...map[string]interface{})
+	service     UserService
+	Validate    func(context.Context, interface{}) ([]core.ErrorMessage, error)
+	LogError    func(context.Context, string, ...map[string]interface{})
 	search      func(context.Context, interface{}, interface{}, int64, int64) (int64, error)
 	paramIndex  map[string]int
 	filterIndex int
@@ -182,7 +183,7 @@ func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	var users []User
 	offset := s.GetOffset(filter.Limit, filter.Page)
-	total, err := h.search(r.Context(), &filter, &users, filter.Limit, offset)
+	total, err := h.search(r.Context(), &filter, &users, filter.PageSize, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

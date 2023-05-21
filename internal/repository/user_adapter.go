@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
+	"github.com/elastic/go-elasticsearch/v7/esutil"
 	"reflect"
 	"strings"
 
@@ -73,7 +74,7 @@ func (e *ElasticSearchUserAdapter) All(ctx context.Context) (*[]model.User, erro
 		e.elastic.Search.WithBody(queryString),
 		e.elastic.Search.WithTrackTotalHits(true),
 		e.elastic.Search.WithPretty(),
-		)
+	)
 	defer result.Body.Close()
 
 	err = json.NewDecoder(result.Body).Decode(&mapResponse)
@@ -93,6 +94,8 @@ func (e *ElasticSearchUserAdapter) All(ctx context.Context) (*[]model.User, erro
 		fmt.Println("This is the source:")
 
 		fmt.Println(source)
+		bytes, _ := json.Marshal(source)
+		_ = json.Unmarshal(bytes, u)
 		listUser = append(listUser, *u)
 
 	}
@@ -145,6 +148,8 @@ func (e *ElasticSearchUserAdapter) Load(ctx context.Context, id string) (*model.
 		fmt.Println("This is the source:")
 
 		fmt.Println(source)
+		bytes, _ := json.Marshal(source)
+		_ = json.Unmarshal(bytes, u)
 		listUser = append(listUser, *u)
 
 	}
@@ -159,10 +164,10 @@ func (e *ElasticSearchUserAdapter) Create(ctx context.Context, user *model.User)
 
 	userJsonString := convertDocToJson(user)
 	request := esapi.IndexRequest{
-		Index: "users",
+		Index:      "users",
 		DocumentID: user.Id,
-		Body: strings.NewReader(userJsonString),
-		Refresh: "true",
+		Body:       strings.NewReader(userJsonString),
+		Refresh:    "true",
 	}
 	response, err := request.Do(ctx, e.elastic)
 
@@ -190,12 +195,14 @@ func (e *ElasticSearchUserAdapter) Create(ctx context.Context, user *model.User)
 }
 
 func (e *ElasticSearchUserAdapter) Update(ctx context.Context, user *model.User) (int64, error) {
-	userJsonString := convertDocToJson(user)
+	query := map[string]interface{}{
+		"doc": user,
+	}
 	request := esapi.UpdateRequest{
-		Index: "users",
+		Index:      "users",
 		DocumentID: user.Id,
-		Body: strings.NewReader(userJsonString),
-		Refresh: "true",
+		Body:       esutil.NewJSONReader(query),
+		Refresh:    "true",
 	}
 	response, err := request.Do(ctx, e.elastic)
 
@@ -216,21 +223,20 @@ func (e *ElasticSearchUserAdapter) Update(ctx context.Context, user *model.User)
 	}
 
 	fmt.Println("IndexRequest to update Status: ", response.Status())
-	fmt.Println("Result: ", result["result"])
+	fmt.Println("Result: ", result)
 
 	fmt.Print("the user %v has been updated successfully", user.Username)
 	return 1, nil
 }
 
 func (e *ElasticSearchUserAdapter) Patch(ctx context.Context, user map[string]interface{}) (int64, error) {
-	userJsonString := convertDocToJson(user)
-	var userid = reflect.ValueOf(user["_id"])
-	delete(user, "_id")
+	var userid = reflect.ValueOf(user["id"])
+	delete(user, "id")
 	request := esapi.UpdateRequest{
-		Index: "users",
+		Index:      "users",
 		DocumentID: userid.String(),
-		Body: strings.NewReader(userJsonString),
-		Refresh: "true",
+		Body:       esutil.NewJSONReader(map[string]interface{}{"doc": user}),
+		Refresh:    "true",
 	}
 	response, err := request.Do(ctx, e.elastic)
 
@@ -259,7 +265,7 @@ func (e *ElasticSearchUserAdapter) Patch(ctx context.Context, user map[string]in
 
 func (e *ElasticSearchUserAdapter) Delete(ctx context.Context, id string) (int64, error) {
 	request := esapi.DeleteRequest{
-		Index: "users",
+		Index:      "users",
 		DocumentID: id,
 	}
 	response, err := request.Do(ctx, e.elastic)

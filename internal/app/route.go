@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+
 	"github.com/gorilla/mux"
 )
 
@@ -22,6 +23,7 @@ func Route(ctx context.Context, r *mux.Router, config Config) error {
 	r.HandleFunc("/health", app.Health.Check).Methods(GET)
 
 	user := "/users"
+	r.HandleFunc(user+"/search", app.User.Search).Methods(GET, POST)
 	r.HandleFunc(user, app.User.All).Methods(GET)
 	r.HandleFunc(user+"/{id}", app.User.Load).Methods(GET)
 	r.HandleFunc(user, app.User.Create).Methods(POST)
