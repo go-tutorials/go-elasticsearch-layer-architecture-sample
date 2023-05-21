@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "8867791e-12fa-4296-b479-f64c73e8a630",
+		"_postman_id": "d23308c6-5cbb-4f60-96cf-fbceb00f6a59",
 		"name": "rest-api",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -262,7 +262,42 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "search users",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"pageIndex\": 1,\n    \"pageSize\": 20,\n    \"username\": \"james.howlett\",\n    \"email\": \"james\",\n    \"phone\": \"0987654321\",\n    \"sort\": \"phone\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/users/search",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"users",
+						"search"
+					]
+				}
+			},
+			"response": []
 		}
-	],
-	"protocolProfileBehavior": {}
+	]
 }

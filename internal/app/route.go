@@ -9,6 +9,7 @@ const (
 	GET    = "GET"
 	POST   = "POST"
 	PUT    = "PUT"
+	PATCH  = "PATCH"
 	DELETE = "DELETE"
 )
 
@@ -20,12 +21,13 @@ func Route(ctx context.Context, r *mux.Router, config Config) error {
 
 	r.HandleFunc("/health", app.Health.Check).Methods(GET)
 
-	userPath := "/users"
-	r.HandleFunc(userPath, app.User.All).Methods(GET)
-	r.HandleFunc(userPath+"/{id}", app.User.Load).Methods(GET)
-	r.HandleFunc(userPath, app.User.Create).Methods(POST)
-	r.HandleFunc(userPath+"/{id}", app.User.Update).Methods(PUT)
-	r.HandleFunc(userPath+"/{id}", app.User.Delete).Methods(DELETE)
+	user := "/users"
+	r.HandleFunc(user, app.User.All).Methods(GET)
+	r.HandleFunc(user+"/{id}", app.User.Load).Methods(GET)
+	r.HandleFunc(user, app.User.Create).Methods(POST)
+	r.HandleFunc(user+"/{id}", app.User.Update).Methods(PUT)
+	r.HandleFunc(user+"/{id}", app.User.Patch).Methods(PATCH)
+	r.HandleFunc(user+"/{id}", app.User.Delete).Methods(DELETE)
 
 	return nil
 }
