@@ -23,7 +23,7 @@ func Route(ctx context.Context, r *mux.Router, config Config) error {
 	userPath := "/users"
 	r.HandleFunc(userPath, app.User.All).Methods(GET)
 	r.HandleFunc(userPath+"/{id}", app.User.Load).Methods(GET)
-	r.HandleFunc(userPath, app.User.Insert).Methods(POST)
+	r.HandleFunc(userPath, app.User.Create).Methods(POST)
 	r.HandleFunc(userPath+"/{id}", app.User.Update).Methods(PUT)
 	r.HandleFunc(userPath+"/{id}", app.User.Delete).Methods(DELETE)
 

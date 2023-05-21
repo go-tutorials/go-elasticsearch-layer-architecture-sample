@@ -41,7 +41,7 @@ func (h *UserHandler) Load(w http.ResponseWriter, r *http.Request) {
 	respond(w, result)
 }
 
-func (h *UserHandler) Insert(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var user User
 	er1 := json.NewDecoder(r.Body).Decode(&user)
 	defer r.Body.Close()

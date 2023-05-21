@@ -48,44 +48,6 @@ func SetField(obj interface{}, name string, value interface{}) error {
 	return nil
 }
 
-func (e *ElasticSearchUserAdapter) Create(ctx context.Context, user *model.User) (int64, error) {
-	if user == nil {
-		fmt.Print("Can not add null user")
-		return 0, nil
-	}
-
-	userJsonString := convertDocToJson(user)
-	request := esapi.IndexRequest{
-		Index: "users",
-		DocumentID: user.Id,
-		Body: strings.NewReader(userJsonString),
-		Refresh: "true",
-	}
-	response, err := request.Do(ctx, e.elastic)
-
-	if err != nil {
-		panic(err)
-		return 0, nil
-	}
-
-	defer response.Body.Close()
-
-	var result map[string]interface{}
-
-	err = json.NewDecoder(response.Body).Decode(&result)
-
-	if err != nil {
-		panic(err)
-		return 0, nil
-	}
-
-	fmt.Println("IndexRequest to insert Status: ", response.Status())
-	fmt.Println("Result: ", result["result"])
-
-	fmt.Printf("the new user %v has been added successfully", user.Username)
-	return 1, nil
-}
-
 func (e *ElasticSearchUserAdapter) All(ctx context.Context) (*[]model.User, error) {
 	var listUser []model.User
 	var mapResponse map[string]interface{}
@@ -137,7 +99,6 @@ func (e *ElasticSearchUserAdapter) All(ctx context.Context) (*[]model.User, erro
 	return &listUser, nil
 }
 
-
 func (e *ElasticSearchUserAdapter) Load(ctx context.Context, id string) (*model.User, error) {
 	var listUser []model.User
 	var mapResponse map[string]interface{}
@@ -188,6 +149,44 @@ func (e *ElasticSearchUserAdapter) Load(ctx context.Context, id string) (*model.
 
 	}
 	return u, nil
+}
+
+func (e *ElasticSearchUserAdapter) Create(ctx context.Context, user *model.User) (int64, error) {
+	if user == nil {
+		fmt.Print("Can not add null user")
+		return 0, nil
+	}
+
+	userJsonString := convertDocToJson(user)
+	request := esapi.IndexRequest{
+		Index: "users",
+		DocumentID: user.Id,
+		Body: strings.NewReader(userJsonString),
+		Refresh: "true",
+	}
+	response, err := request.Do(ctx, e.elastic)
+
+	if err != nil {
+		panic(err)
+		return 0, nil
+	}
+
+	defer response.Body.Close()
+
+	var result map[string]interface{}
+
+	err = json.NewDecoder(response.Body).Decode(&result)
+
+	if err != nil {
+		panic(err)
+		return 0, nil
+	}
+
+	fmt.Println("IndexRequest to insert Status: ", response.Status())
+	fmt.Println("Result: ", result["result"])
+
+	fmt.Printf("the new user %v has been added successfully", user.Username)
+	return 1, nil
 }
 
 func (e *ElasticSearchUserAdapter) Update(ctx context.Context, user *model.User) (int64, error) {
