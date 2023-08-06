@@ -7,10 +7,10 @@ import (
 	e "github.com/core-go/elasticsearch"
 	"github.com/core-go/elasticsearch/query"
 	"github.com/core-go/health"
-	es "github.com/core-go/health/elasticsearch/v7"
+	es "github.com/core-go/health/elasticsearch/v8"
 	"github.com/core-go/log"
 	"github.com/core-go/search"
-	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v8"
 	"reflect"
 
 	"go-service/internal/handler"
