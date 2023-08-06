@@ -7,7 +7,7 @@ import (
 	"reflect"
 
 	"github.com/core-go/core"
-	s "github.com/core-go/search"
+	"github.com/core-go/search"
 	"github.com/gorilla/mux"
 
 	. "go-service/internal/model"
@@ -16,20 +16,17 @@ import (
 
 const InternalServerError = "Internal Server Error"
 
-type UserHandler struct {
-	service     UserService
-	Validate    func(context.Context, interface{}) ([]core.ErrorMessage, error)
-	LogError    func(context.Context, string, ...map[string]interface{})
-	search      func(context.Context, interface{}, interface{}, int64, int64) (int64, error)
-	paramIndex  map[string]int
-	filterIndex int
+func NewUserHandler(find func(context.Context, interface{}, interface{}, int64, int64) (int64, error), service UserService, validate func(context.Context, interface{}) ([]core.ErrorMessage, error), logError func(context.Context, string, ...map[string]interface{})) *UserHandler {
+	filterType := reflect.TypeOf(UserFilter{})
+	modelType := reflect.TypeOf(User{})
+	searchHandler := search.NewSearchHandler(find, modelType, filterType, logError, nil)
+	return &UserHandler{service: service, SearchHandler: searchHandler, validate: validate}
 }
 
-func NewUserHandler(search func(context.Context, interface{}, interface{}, int64, int64) (int64, error), service UserService, validate func(context.Context, interface{}) ([]core.ErrorMessage, error), logError func(context.Context, string, ...map[string]interface{})) *UserHandler {
-	filterType := reflect.TypeOf(UserFilter{})
-	paramIndex := s.BuildParamIndex(filterType)
-	filterIndex := s.FindFilterIndex(filterType)
-	return &UserHandler{service: service, Validate: validate, LogError: logError, search: search, paramIndex: paramIndex, filterIndex: filterIndex}
+type UserHandler struct {
+	service UserService
+	*search.SearchHandler
+	validate func(context.Context, interface{}) ([]core.ErrorMessage, error)
 }
 
 func (h *UserHandler) All(w http.ResponseWriter, r *http.Request) {
@@ -38,9 +35,8 @@ func (h *UserHandler) All(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	JSON(w, http.StatusOK, users)
+	JSON(w, 200, users)
 }
-
 func (h *UserHandler) Load(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	if len(id) == 0 {
@@ -63,7 +59,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, er1.Error(), http.StatusBadRequest)
 		return
 	}
-	errors, er2 := h.Validate(r.Context(), &user)
+	errors, er2 := h.validate(r.Context(), &user)
 	if er2 != nil {
 		h.LogError(r.Context(), er2.Error())
 		http.Error(w, InternalServerError, http.StatusInternalServerError)
@@ -100,7 +96,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Id not match", http.StatusBadRequest)
 		return
 	}
-	errors, er2 := h.Validate(r.Context(), &user)
+	errors, er2 := h.validate(r.Context(), &user)
 	if er2 != nil {
 		h.LogError(r.Context(), er2.Error())
 		http.Error(w, InternalServerError, http.StatusInternalServerError)
@@ -145,7 +141,7 @@ func (h *UserHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r = r.WithContext(context.WithValue(r.Context(), "method", "patch"))
-	errors, er3 := h.Validate(r.Context(), &user)
+	errors, er3 := h.validate(r.Context(), &user)
 	if er3 != nil {
 		h.LogError(r.Context(), er3.Error())
 		http.Error(w, InternalServerError, http.StatusInternalServerError)
@@ -176,19 +172,6 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	status := GetStatus(res)
 	JSON(w, status, res)
-}
-func (h *UserHandler) Search(w http.ResponseWriter, r *http.Request) {
-	filter := UserFilter{Filter: &s.Filter{}}
-	s.Decode(r, &filter, h.paramIndex, h.filterIndex)
-
-	var users []User
-	offset := s.GetOffset(filter.Limit, filter.Page)
-	total, err := h.search(r.Context(), &filter, &users, filter.PageSize, offset)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	JSON(w, 200, &s.Result{List: &users, Total: total})
 }
 
 func JSON(w http.ResponseWriter, code int, res interface{}) error {
