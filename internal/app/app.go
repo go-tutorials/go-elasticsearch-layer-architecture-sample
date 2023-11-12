@@ -43,7 +43,10 @@ func NewApp(ctx context.Context, config Config) (*ApplicationContext, error) {
 	}
 	fmt.Println("Elastic server response: ", res)
 
-	validator := v.NewValidator()
+	validator, err := v.NewValidator()
+	if err != nil {
+		return nil, err
+	}
 
 	userType := reflect.TypeOf(model.User{})
 	userQueryBuilder := query.NewBuilder(userType)
