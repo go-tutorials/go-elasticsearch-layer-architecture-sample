@@ -2,11 +2,12 @@ package repository
 
 import (
 	"context"
-	es "github.com/core-go/elasticsearch"
-	"github.com/elastic/go-elasticsearch/v8"
 	"reflect"
 
-	"go-service/internal/model"
+	es "github.com/core-go/elasticsearch"
+	"github.com/elastic/go-elasticsearch/v8"
+
+	"go-service/internal/user/model"
 )
 
 type UserAdapter struct {

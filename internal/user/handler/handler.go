@@ -10,21 +10,21 @@ import (
 	"github.com/core-go/search"
 	"github.com/gorilla/mux"
 
-	. "go-service/internal/model"
-	. "go-service/internal/service"
+	"go-service/internal/user/model"
+	"go-service/internal/user/service"
 )
 
 const InternalServerError = "Internal Server Error"
 
-func NewUserHandler(find func(context.Context, interface{}, interface{}, int64, int64) (int64, error), service UserService, validate func(context.Context, interface{}) ([]core.ErrorMessage, error), logError func(context.Context, string, ...map[string]interface{})) *UserHandler {
-	filterType := reflect.TypeOf(UserFilter{})
-	modelType := reflect.TypeOf(User{})
+func NewUserHandler(find func(context.Context, interface{}, interface{}, int64, int64) (int64, error), service service.UserService, validate func(context.Context, interface{}) ([]core.ErrorMessage, error), logError func(context.Context, string, ...map[string]interface{})) *UserHandler {
+	filterType := reflect.TypeOf(model.UserFilter{})
+	modelType := reflect.TypeOf(model.User{})
 	searchHandler := search.NewSearchHandler(find, modelType, filterType, logError, nil)
 	return &UserHandler{service: service, SearchHandler: searchHandler, validate: validate}
 }
 
 type UserHandler struct {
-	service UserService
+	service service.UserService
 	*search.SearchHandler
 	validate func(context.Context, interface{}) ([]core.ErrorMessage, error)
 }
@@ -52,7 +52,7 @@ func (h *UserHandler) Load(w http.ResponseWriter, r *http.Request) {
 	JSON(w, IsFound(user), user)
 }
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var user User
+	var user model.User
 	er1 := json.NewDecoder(r.Body).Decode(&user)
 	defer r.Body.Close()
 	if er1 != nil {
@@ -78,7 +78,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	JSON(w, http.StatusCreated, res)
 }
 func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
-	var user User
+	var user model.User
 	er1 := json.NewDecoder(r.Body).Decode(&user)
 	defer r.Body.Close()
 	if er1 != nil {
@@ -121,7 +121,7 @@ func (h *UserHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user User
+	var user model.User
 	userType := reflect.TypeOf(user)
 	_, jsonMap, _ := core.BuildMapField(userType)
 	body, er1 := core.BuildMapAndStruct(r, &user)
