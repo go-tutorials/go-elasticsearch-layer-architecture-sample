@@ -4,15 +4,15 @@ import (
 	"context"
 	"reflect"
 
-	es "github.com/core-go/elasticsearch"
 	"github.com/elastic/go-elasticsearch/v8"
 
 	"go-service/internal/user/model"
+	es "go-service/pkg/elasticsearch"
 )
 
 type UserAdapter struct {
-	client *elasticsearch.Client
-	idIndex int
+	client     *elasticsearch.Client
+	idIndex    int
 	jsonIdName string
 }
 

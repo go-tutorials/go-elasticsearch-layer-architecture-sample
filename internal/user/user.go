@@ -6,15 +6,15 @@ import (
 	"reflect"
 
 	v "github.com/core-go/core/v10"
-	e "github.com/core-go/elasticsearch"
-	"github.com/core-go/elasticsearch/query"
 	"github.com/core-go/search"
+	"github.com/core-go/search/elasticsearch"
 	"github.com/elastic/go-elasticsearch/v8"
 
 	"go-service/internal/user/handler"
 	"go-service/internal/user/model"
 	"go-service/internal/user/repository"
 	"go-service/internal/user/service"
+	e "go-service/pkg/elasticsearch"
 )
 
 type UserTransport interface {
@@ -27,7 +27,7 @@ type UserTransport interface {
 	Delete(w http.ResponseWriter, r *http.Request)
 }
 
-func NewUserHandler(client *elasticsearch.Client, logError func(context.Context, string, ...map[string]interface{})) (UserTransport,error) {
+func NewUserHandler(client *elasticsearch.Client, logError func(context.Context, string, ...map[string]interface{})) (UserTransport, error) {
 	validator, err := v.NewValidator()
 	if err != nil {
 		return nil, err
