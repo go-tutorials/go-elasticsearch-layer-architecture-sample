@@ -11,12 +11,7 @@ import (
 	"strings"
 )
 
-func BuildSearchResult(ctx context.Context, db *elasticsearch.Client, results interface{}, indexName string, query map[string]interface{}, sort []map[string]interface{}, limit int64, offset int64, modelType reflect.Type, options ...func(context.Context, interface{}) (interface{}, error)) (int64, error) {
-	var mp func(context.Context, interface{}) (interface{}, error)
-	if len(options) > 0 {
-		mp = options[0]
-	}
-
+func BuildSearchResult(ctx context.Context, db *elasticsearch.Client, results interface{}, indexName string, query map[string]interface{}, sort []map[string]interface{}, limit int64, offset int64, modelType reflect.Type) (int64, error) {
 	from := int(offset)
 	size := int(limit)
 	fullQuery := UpdateQuery(query)
@@ -63,11 +58,6 @@ func BuildSearchResult(ctx context.Context, db *elasticsearch.Client, results in
 			if err != nil {
 				return count, err
 			}
-
-			if mp != nil {
-				MapModels(ctx, results, mp)
-			}
-
 			return count, err
 		}
 	}

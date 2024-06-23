@@ -13,9 +13,9 @@ import (
 )
 
 func FindIdField(modelType reflect.Type) (int, string, string) {
-	return FindBsonField(modelType, "_id")
+	return findBsonField(modelType, "_id")
 }
-func FindBsonField(modelType reflect.Type, bsonName string) (int, string, string) {
+func findBsonField(modelType reflect.Type, bsonName string) (int, string, string) {
 	numField := modelType.NumField()
 	for i := 0; i < numField; i++ {
 		field := modelType.Field(i)
@@ -105,10 +105,6 @@ func BuildQueryWithoutIdFromObject(object interface{}) map[string]interface{} {
 	return result
 }
 
-func BuildQueryMap(indexName string, query map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{}
-}
-
 func MapToDBObject(object map[string]interface{}, objectMap map[string]string) map[string]interface{} {
 	result := make(map[string]interface{})
 	for key, value := range object {
@@ -141,7 +137,7 @@ func Exist(ctx context.Context, es *elasticsearch.Client, indexName string, docu
 	}
 }
 
-func FindOneByIdAndDecode(ctx context.Context, es *elasticsearch.Client, indexName string, documentID string, result interface{}) (bool, error) {
+func FindOne(ctx context.Context, es *elasticsearch.Client, indexName string, documentID string, result interface{}) (bool, error) {
 	req := esapi.GetRequest{
 		Index:      indexName,
 		DocumentID: documentID,
@@ -167,7 +163,7 @@ func FindOneByIdAndDecode(ctx context.Context, es *elasticsearch.Client, indexNa
 	return false, errors.New("response error")
 }
 
-func FindOneAndDecode(ctx context.Context, es *elasticsearch.Client, index []string, query map[string]interface{}, result interface{}) (bool, error) {
+func FindOneByQuery(ctx context.Context, es *elasticsearch.Client, index []string, query map[string]interface{}, result interface{}) (bool, error) {
 	req := esapi.SearchRequest{
 		Index:          index,
 		Body:           esutil.NewJSONReader(query),
@@ -200,7 +196,7 @@ func FindOneAndDecode(ctx context.Context, es *elasticsearch.Client, index []str
 	}
 }
 
-func FindAndDecode(ctx context.Context, es *elasticsearch.Client, indexName []string, query map[string]interface{}, result interface{}) (bool, error) {
+func Find(ctx context.Context, es *elasticsearch.Client, indexName []string, query map[string]interface{}, result interface{}) (bool, error) {
 	req := esapi.SearchRequest{
 		Index:          indexName,
 		Body:           esutil.NewJSONReader(query),
@@ -245,7 +241,7 @@ func FindAndDecode(ctx context.Context, es *elasticsearch.Client, indexName []st
 	}
 }
 
-func InsertOne(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, opts ...int) (int64, error) {
+func Create(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, opts ...int) (int64, error) {
 	object := reflect.Indirect(reflect.ValueOf(model))
 	modelType := object.Type()
 	var req esapi.CreateRequest
@@ -290,7 +286,7 @@ func InsertOne(ctx context.Context, es *elasticsearch.Client, indexName string, 
 	}
 }
 
-func UpdateOne(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, opts ...int) (int64, error) {
+func Update(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, opts ...int) (int64, error) {
 	object := reflect.Indirect(reflect.ValueOf(model))
 	modelType := object.Type()
 	idIndex := -1
@@ -333,7 +329,7 @@ func UpdateOne(ctx context.Context, es *elasticsearch.Client, indexName string, 
 	}
 }
 
-func UpsertOne(ctx context.Context, es *elasticsearch.Client, indexName string, id string, model interface{}) (int64, error) {
+func Save(ctx context.Context, es *elasticsearch.Client, indexName string, id string, model interface{}) (int64, error) {
 	// body := BuildQueryWithoutIdFromObject(model)
 	query := map[string]interface{}{
 		"doc": model,
@@ -360,7 +356,7 @@ func UpsertOne(ctx context.Context, es *elasticsearch.Client, indexName string, 
 	return successful, nil
 }
 
-func PatchOne(ctx context.Context, es *elasticsearch.Client, indexName string, id string, model map[string]interface{}) (int64, error) {
+func Patch(ctx context.Context, es *elasticsearch.Client, indexName string, id string, model map[string]interface{}) (int64, error) {
 	idValue := reflect.ValueOf(model[id])
 	if idValue.IsZero() {
 		return 0, errors.New("missing document ID in the map")
@@ -393,7 +389,7 @@ func PatchOne(ctx context.Context, es *elasticsearch.Client, indexName string, i
 	}
 }
 
-func DeleteOne(ctx context.Context, es *elasticsearch.Client, indexName string, documentID string) (int64, error) {
+func Delete(ctx context.Context, es *elasticsearch.Client, indexName string, documentID string) (int64, error) {
 	req := esapi.DeleteRequest{
 		Index:      indexName,
 		DocumentID: documentID,
@@ -414,42 +410,4 @@ func DeleteOne(ctx context.Context, es *elasticsearch.Client, indexName string, 
 			return successful, nil
 		}
 	}
-}
-
-func GetFieldByJson(modelType reflect.Type, jsonName string) (int, string, string) {
-	numField := modelType.NumField()
-	for i := 0; i < numField; i++ {
-		field := modelType.Field(i)
-		tag1, ok1 := field.Tag.Lookup("json")
-		if ok1 && strings.Split(tag1, ",")[0] == jsonName {
-			if tag2, ok2 := field.Tag.Lookup("bson"); ok2 {
-				return i, field.Name, strings.Split(tag2, ",")[0]
-			}
-			return i, field.Name, ""
-		}
-	}
-	return -1, jsonName, jsonName
-}
-
-func MapModels(ctx context.Context, models interface{}, mp func(context.Context, interface{}) (interface{}, error)) (interface{}, error) {
-	valueModelObject := reflect.Indirect(reflect.ValueOf(models))
-	if valueModelObject.Kind() == reflect.Ptr {
-		valueModelObject = reflect.Indirect(valueModelObject)
-	}
-	if valueModelObject.Kind() == reflect.Slice {
-		le := valueModelObject.Len()
-		for i := 0; i < le; i++ {
-			x := valueModelObject.Index(i)
-			k := x.Kind()
-			if k == reflect.Struct {
-				y := x.Addr().Interface()
-				mp(ctx, y)
-			} else {
-				y := x.Interface()
-				mp(ctx, y)
-			}
-
-		}
-	}
-	return models, nil
 }
