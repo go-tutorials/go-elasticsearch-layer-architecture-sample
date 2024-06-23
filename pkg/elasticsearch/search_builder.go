@@ -15,7 +15,7 @@ type SearchBuilder struct {
 	ModelType  reflect.Type
 }
 
-func NewSearchQuery(client *elasticsearch.Client, indexName string, modelType reflect.Type, buildQuery func(interface{}) map[string]interface{}, getSort func(m interface{}) string) *SearchBuilder {
+func NewSearchBuilder(client *elasticsearch.Client, indexName string, modelType reflect.Type, buildQuery func(interface{}) map[string]interface{}, getSort func(m interface{}) string) *SearchBuilder {
 	return &SearchBuilder{Client: client, IndexName: indexName, BuildQuery: buildQuery, GetSort: getSort, ModelType: modelType}
 }
 func (b *SearchBuilder) Search(ctx context.Context, sm interface{}, results interface{}, pageSize int64, skip int64) (int64, error) {

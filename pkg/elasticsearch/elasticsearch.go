@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/elastic/go-elasticsearch/v8/esutil"
@@ -72,26 +73,6 @@ func FindFieldByIndex(modelType reflect.Type, fieldIndex int) (fieldName, jsonTa
 	return "", ""
 }
 
-func MakeMapJson(modelType reflect.Type) map[string]string {
-	maps := make(map[string]string)
-	numField := modelType.NumField()
-	for i := 0; i < numField; i++ {
-		key1 := modelType.Field(i).Name
-		fields, _ := modelType.FieldByName(key1)
-		if tag, ok := fields.Tag.Lookup("json"); ok {
-			if strings.Contains(tag, ",") {
-				a := strings.Split(tag, ",")
-				maps[key1] = a[0]
-			} else {
-				maps[key1] = tag
-			}
-		} else {
-			maps[key1] = key1
-		}
-	}
-	return maps
-}
-
 func BuildQueryWithoutIdFromObject(object interface{}) map[string]interface{} {
 	valueOf := reflect.Indirect(reflect.ValueOf(object))
 	idIndex, _, _ := FindIdField(valueOf.Type())
@@ -101,15 +82,6 @@ func BuildQueryWithoutIdFromObject(object interface{}) map[string]interface{} {
 			_, jsonName := FindFieldByIndex(valueOf.Type(), i)
 			result[jsonName] = valueOf.Field(i).Interface()
 		}
-	}
-	return result
-}
-
-func MapToDBObject(object map[string]interface{}, objectMap map[string]string) map[string]interface{} {
-	result := make(map[string]interface{})
-	for key, value := range object {
-		field := objectMap[key]
-		result[field] = value
 	}
 	return result
 }
@@ -163,10 +135,10 @@ func FindOne(ctx context.Context, es *elasticsearch.Client, indexName string, do
 	return false, errors.New("response error")
 }
 
-func FindOneByQuery(ctx context.Context, es *elasticsearch.Client, index []string, query map[string]interface{}, result interface{}) (bool, error) {
+func FindOneByFilter(ctx context.Context, es *elasticsearch.Client, index []string, filter map[string]interface{}, result interface{}) (bool, error) {
 	req := esapi.SearchRequest{
 		Index:          index,
-		Body:           esutil.NewJSONReader(query),
+		Body:           esutil.NewJSONReader(filter),
 		TrackTotalHits: true,
 		Pretty:         true,
 	}
@@ -196,7 +168,7 @@ func FindOneByQuery(ctx context.Context, es *elasticsearch.Client, index []strin
 	}
 }
 
-func Find(ctx context.Context, es *elasticsearch.Client, indexName []string, query map[string]interface{}, result interface{}) (bool, error) {
+func Find(ctx context.Context, es *elasticsearch.Client, indexName []string, query map[string]interface{}, result interface{}) error {
 	req := esapi.SearchRequest{
 		Index:          indexName,
 		Body:           esutil.NewJSONReader(query),
@@ -205,17 +177,17 @@ func Find(ctx context.Context, es *elasticsearch.Client, indexName []string, que
 	}
 	res, err := req.Do(ctx, es)
 	if err != nil {
-		return false, err
+		return err
 	}
 	defer res.Body.Close()
 
 	modelType := reflect.TypeOf(result).Elem().Elem()
 	if res.IsError() {
-		return false, errors.New("response error")
+		return errors.New("response error")
 	} else {
 		var r map[string]interface{}
 		if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
-			return false, err
+			return err
 		} else {
 			hits := r["hits"].(map[string]interface{})["hits"].([]interface{})
 			listResults := make([]interface{}, 0)
@@ -231,33 +203,18 @@ func Find(ctx context.Context, es *elasticsearch.Client, indexName []string, que
 				}
 				listResults = append(listResults, r)
 			}
-
-			err := json.NewDecoder(esutil.NewJSONReader(listResults)).Decode(result)
-			if err != nil {
-				return false, err
-			}
-			return true, nil
+			return json.NewDecoder(esutil.NewJSONReader(listResults)).Decode(result)
 		}
 	}
 }
 
-func Create(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, opts ...int) (int64, error) {
-	object := reflect.Indirect(reflect.ValueOf(model))
-	modelType := object.Type()
+func Create(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, id *string) (int64, error) {
 	var req esapi.CreateRequest
-	idIndex := -1
-	if len(opts) > 0 && opts[0] >= 0 {
-		idIndex = opts[0]
-	} else {
-		idIndex, _, _ = FindIdField(modelType)
-	}
-	if idIndex >= 0 {
-		modelValue := reflect.Indirect(reflect.ValueOf(model))
-		idValue := modelValue.Field(idIndex).String()
+	if id != nil {
 		body := BuildQueryWithoutIdFromObject(model)
 		req = esapi.CreateRequest{
 			Index:      indexName,
-			DocumentID: idValue,
+			DocumentID: *id,
 			Body:       esutil.NewJSONReader(body),
 			Refresh:    "true",
 		}
@@ -286,28 +243,13 @@ func Create(ctx context.Context, es *elasticsearch.Client, indexName string, mod
 	}
 }
 
-func Update(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, opts ...int) (int64, error) {
-	object := reflect.Indirect(reflect.ValueOf(model))
-	modelType := object.Type()
-	idIndex := -1
-	if len(opts) > 0 && opts[0] >= 0 {
-		idIndex = opts[0]
-	} else {
-		idIndex, _, _ = FindIdField(modelType)
-	}
-	if idIndex < 0 {
-		return 0, errors.New("missing document ID in the object")
-	}
-	modelValue := reflect.ValueOf(model)
-	idValue := modelValue.Elem().Field(idIndex).String()
-	// body := BuildQueryWithoutIdFromObject(model)
-
+func Update(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, id string) (int64, error) {
 	query := map[string]interface{}{
 		"doc": model,
 	}
 	req := esapi.UpdateRequest{
 		Index:      indexName,
-		DocumentID: idValue,
+		DocumentID: id,
 		Body:       esutil.NewJSONReader(query),
 		Refresh:    "true",
 	}
@@ -329,7 +271,7 @@ func Update(ctx context.Context, es *elasticsearch.Client, indexName string, mod
 	}
 }
 
-func Save(ctx context.Context, es *elasticsearch.Client, indexName string, id string, model interface{}) (int64, error) {
+func Save(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, id string) (int64, error) {
 	// body := BuildQueryWithoutIdFromObject(model)
 	query := map[string]interface{}{
 		"doc": model,
@@ -356,22 +298,27 @@ func Save(ctx context.Context, es *elasticsearch.Client, indexName string, id st
 	return successful, nil
 }
 
-func Patch(ctx context.Context, es *elasticsearch.Client, indexName string, id string, model map[string]interface{}) (int64, error) {
-	idValue := reflect.ValueOf(model[id])
-	if idValue.IsZero() {
-		return 0, errors.New("missing document ID in the map")
+func Patch(ctx context.Context, es *elasticsearch.Client, indexName string, model map[string]interface{}, idName string) (int64, error) {
+	idValue, ok := model[idName]
+	if !ok {
+		return -1, fmt.Errorf("%s must be in map[string]interface{} for patch", idName)
 	}
-	delete(model, id)
+	id, ok2 := idValue.(string)
+	if !ok2 {
+		return -1, fmt.Errorf("%s map[string]interface{} must be a string for patch", idName)
+	}
+	delete(model, idName)
 	query := map[string]interface{}{
 		"doc": model,
 	}
 	req := esapi.UpdateRequest{
 		Index:      indexName,
-		DocumentID: idValue.String(),
+		DocumentID: id,
 		Body:       esutil.NewJSONReader(query),
 		Refresh:    "true",
 	}
 	res, err := req.Do(ctx, es)
+	model[idName] = id
 	if err != nil {
 		return -1, err
 	}
