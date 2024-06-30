@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"strings"
 
+	es "github.com/core-go/elasticsearch"
 	"github.com/elastic/go-elasticsearch/v8"
 
 	"go-service/internal/user/model"
-	es "go-service/pkg/elasticsearch"
 )
 
 type UserAdapter struct {
@@ -46,7 +46,7 @@ func BuildMap(modelType reflect.Type) []FieldMap {
 	}
 	return fms
 }
-func buildDoc(model interface{}, fields []FieldMap) map[string]interface{} {
+func BuildDocument(model interface{}, fields []FieldMap) map[string]interface{} {
 	vo := reflect.ValueOf(model)
 	if vo.Kind() == reflect.Ptr {
 		vo = reflect.Indirect(vo)
@@ -85,18 +85,18 @@ func (a *UserAdapter) Load(ctx context.Context, id string) (*model.User, error) 
 func (a *UserAdapter) Create(ctx context.Context, user *model.User) (int64, error) {
 	var u model.User
 	u = *user
-	return es.Create(ctx, a.Client, a.Index, buildDoc(u, a.Map), &user.Id)
+	return es.Create(ctx, a.Client, a.Index, BuildDocument(u, a.Map), &user.Id)
 }
 
 func (a *UserAdapter) Update(ctx context.Context, user *model.User) (int64, error) {
 	if len(user.Id) == 0 {
 		return -1, fmt.Errorf("require Id Field '%s' of User struct for update", "Id")
 	}
-	res, err := es.Update(ctx, a.Client, a.Index, buildDoc(user, a.Map), user.Id)
+	res, err := es.Update(ctx, a.Client, a.Index, BuildDocument(user, a.Map), user.Id)
 	return res, err
 }
 func (a *UserAdapter) Save(ctx context.Context, user *model.User) (int64, error) {
-	res, err := es.Save(ctx, a.Client, a.Index, buildDoc(user, a.Map), user.Id)
+	res, err := es.Save(ctx, a.Client, a.Index, BuildDocument(user, a.Map), user.Id)
 	return res, err
 }
 

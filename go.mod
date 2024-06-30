@@ -7,6 +7,7 @@ toolchain go1.22.4
 require (
 	github.com/core-go/config v1.0.1
 	github.com/core-go/core v0.6.4
+	github.com/core-go/elasticsearch v0.1.7
 	github.com/core-go/health v1.0.0
 	github.com/core-go/log v1.0.2
 	github.com/core-go/search v1.0.3
