@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/elastic/go-elasticsearch/v8"
 
@@ -11,54 +13,97 @@ import (
 )
 
 type UserAdapter struct {
-	Client    *elasticsearch.Client
-	IndexName string
-	idIndex   int
-	idJson    string
+	Client  *elasticsearch.Client
+	Index   string
+	idIndex int
+	idJson  string
+	Map     []FieldMap
+}
+type FieldMap struct {
+	Index int
+	Json  string
+	Id    bool
 }
 
+func BuildMap(modelType reflect.Type) []FieldMap {
+	var fms []FieldMap
+	numField := modelType.NumField()
+	for i := 0; i < numField; i++ {
+		field := modelType.Field(i)
+		bsonTag := field.Tag.Get("bson")
+		tags := strings.Split(bsonTag, ",")
+		json := field.Name
+		if tag1, ok1 := field.Tag.Lookup("json"); ok1 {
+			json = strings.Split(tag1, ",")[0]
+		}
+		fm := FieldMap{Index: i, Json: json}
+		for _, tag := range tags {
+			if strings.TrimSpace(tag) == "_id" {
+				fm.Id = true
+			}
+		}
+		fms = append(fms, fm)
+	}
+	return fms
+}
+func buildDoc(model interface{}, fields []FieldMap) map[string]interface{} {
+	vo := reflect.ValueOf(model)
+	if vo.Kind() == reflect.Ptr {
+		vo = reflect.Indirect(vo)
+	}
+	result := map[string]interface{}{}
+	le := len(fields)
+	for i := 0; i < le; i++ {
+		if !fields[i].Id {
+			result[fields[i].Json] = vo.Field(fields[i].Index).Interface()
+		}
+	}
+	return result
+}
 func NewUserRepository(client *elasticsearch.Client) *UserAdapter {
 	userType := reflect.TypeOf(model.User{})
 	idIndex, _, idJson := es.FindIdField(userType)
-	return &UserAdapter{Client: client, IndexName: "users", idIndex: idIndex, idJson: idJson}
+	return &UserAdapter{Client: client, Index: "users", idIndex: idIndex, idJson: idJson, Map: BuildMap(userType)}
 }
 
-func (e *UserAdapter) All(ctx context.Context) ([]model.User, error) {
+func (a *UserAdapter) All(ctx context.Context) ([]model.User, error) {
 	var users []model.User
 	query := make(map[string]interface{})
-	err := es.Find(ctx, e.Client, []string{"users"}, query, &users)
+	err := es.Find(ctx, a.Client, []string{"users"}, query, &users)
 	return users, err
 }
 
-func (e *UserAdapter) Load(ctx context.Context, id string) (*model.User, error) {
+func (a *UserAdapter) Load(ctx context.Context, id string) (*model.User, error) {
 	var user model.User
-	ok, err := es.FindOne(ctx, e.Client, "users", id, &user)
+	ok, err := es.FindOne(ctx, a.Client, a.Index, id, &user)
 	if !ok || err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-func (e *UserAdapter) Create(ctx context.Context, user *model.User) (int64, error) {
-	id := user.Id
-	user.Id = ""
-	res, err := es.Create(ctx, e.Client, "users", user, &id)
-	user.Id = id
+func (a *UserAdapter) Create(ctx context.Context, user *model.User) (int64, error) {
+	var u model.User
+	u = *user
+	return es.Create(ctx, a.Client, a.Index, buildDoc(u, a.Map), &user.Id)
+}
+
+func (a *UserAdapter) Update(ctx context.Context, user *model.User) (int64, error) {
+	if len(user.Id) == 0 {
+		return -1, fmt.Errorf("require Id Field '%s' of User struct for update", "Id")
+	}
+	res, err := es.Update(ctx, a.Client, a.Index, buildDoc(user, a.Map), user.Id)
+	return res, err
+}
+func (a *UserAdapter) Save(ctx context.Context, user *model.User) (int64, error) {
+	res, err := es.Save(ctx, a.Client, a.Index, buildDoc(user, a.Map), user.Id)
 	return res, err
 }
 
-func (e *UserAdapter) Update(ctx context.Context, user *model.User) (int64, error) {
-	id := user.Id
-	user.Id = ""
-	res, err := es.Update(ctx, e.Client, "users", user, user.Id)
-	user.Id = id
-	return res, err
+func (a *UserAdapter) Patch(ctx context.Context, user map[string]interface{}) (int64, error) {
+	return es.Patch(ctx, a.Client, a.Index, user, a.idJson)
 }
 
-func (e *UserAdapter) Patch(ctx context.Context, user map[string]interface{}) (int64, error) {
-	return es.Patch(ctx, e.Client, "users", user, e.idJson)
-}
-
-func (e *UserAdapter) Delete(ctx context.Context, id string) (int64, error) {
-	return es.Delete(ctx, e.Client, "users", id)
+func (a *UserAdapter) Delete(ctx context.Context, id string) (int64, error) {
+	return es.Delete(ctx, a.Client, a.Index, id)
 }

@@ -211,11 +211,10 @@ func Find(ctx context.Context, es *elasticsearch.Client, indexName []string, que
 func Create(ctx context.Context, es *elasticsearch.Client, indexName string, model interface{}, id *string) (int64, error) {
 	var req esapi.CreateRequest
 	if id != nil {
-		body := BuildQueryWithoutIdFromObject(model)
 		req = esapi.CreateRequest{
 			Index:      indexName,
 			DocumentID: *id,
-			Body:       esutil.NewJSONReader(body),
+			Body:       esutil.NewJSONReader(model),
 			Refresh:    "true",
 		}
 	} else {
