@@ -10,6 +10,9 @@ log:
   map:
     time: "@timestamp"
     msg: message
+    stacktrace: stacktrace
+    caller: caller
+    function: func
 
 middleware:
   log: true
@@ -17,3 +20,8 @@ middleware:
   request: request
   response: response
   size: size
+  status: status
+
+response:
+  id: X-Response-Id
+  correlation: X-Correlation-Id
