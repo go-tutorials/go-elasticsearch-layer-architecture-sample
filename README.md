@@ -12,6 +12,62 @@ cd go-elasticsearch-layer-architecture-sample
 go run main.go
 ```
 
+## Architecture
+### Simple Layer Architecture
+![Layer Architecture](https://cdn-images-1.medium.com/max/800/1*JDYTlK00yg0IlUjZ9-sp7Q.png)
+
+### Layer Architecture with full features
+![Layer Architecture with standard features: config, health check, logging, middleware log tracing](https://cdn-images-1.medium.com/max/800/1*8UjJSv_tW0xBKFXKZu86MA.png)
+#### [core-go/search](https://github.com/core-go/search)
+- Build the search model at http handler
+- Build dynamic SQL for search
+    - Build SQL for paging by page index (page) and page size (limit)
+    - Build SQL to count total of records
+### Search users: Support both GET and POST
+#### POST /users/search
+##### *Request:* POST /users/search
+In the below sample, search users with these criteria:
+- get users of page "1", with page size "20"
+- email="tony": get users with email starting with "tony"
+- dateOfBirth between "min" and "max" (between 1953-11-16 and 1976-11-16)
+- sort by phone ascending, id descending
+```json
+{
+    "page": 1,
+    "limit": 20,
+    "sort": "phone,-id",
+    "email": "tony",
+    "dateOfBirth": {
+        "min": "1953-11-16T00:00:00+07:00",
+        "max": "1976-11-16T00:00:00+07:00"
+    }
+}
+```
+##### GET /users/search?page=1&limit=2&email=tony&dateOfBirth.min=1953-11-16T00:00:00+07:00&dateOfBirth.max=1976-11-16T00:00:00+07:00&sort=phone,-id
+In this sample, search users with these criteria:
+- get users of page "1", with page size "20"
+- email="tony": get users with email starting with "tony"
+- dateOfBirth between "min" and "max" (between 1953-11-16 and 1976-11-16)
+- sort by phone ascending, id descending
+
+#### *Response:*
+- total: total of users, which is used to calculate numbers of pages at client
+- list: list of users
+```json
+{
+    "list": [
+        {
+            "id": "ironman",
+            "username": "tony.stark",
+            "email": "tony.stark@gmail.com",
+            "phone": "0987654321",
+            "dateOfBirth": "1963-03-24T17:00:00Z"
+        }
+    ],
+    "total": 1
+}
+```
+
 ## API Design
 ### Common HTTP methods
 - GET: retrieve a representation of the resource
