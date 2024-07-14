@@ -6,7 +6,7 @@ import (
 
 	"github.com/core-go/health"
 	es "github.com/core-go/health/elasticsearch/v8"
-	"github.com/core-go/log"
+	"github.com/core-go/log/zap"
 	"github.com/elastic/go-elasticsearch/v8"
 
 	"go-service/internal/user"
@@ -31,7 +31,7 @@ func NewApp(ctx context.Context, config Config) (*ApplicationContext, error) {
 
 	res, err := client.Info()
 	if err != nil {
-		logError(ctx, "Elastic server Error: " + err.Error())
+		logError(ctx, "Elastic server Error: "+err.Error())
 		return nil, err
 	}
 	fmt.Println("Elastic server response: ", res)

@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Swagger Petstore - OpenAPI 3.0
+  title: Swagger Sample - OpenAPI 3.0
   description: |-
     This is a sample User Server based on the OpenAPI 3.0 specification.  You can find out more about
     Swagger at [https://swagger.io](https://swagger.io).
@@ -36,13 +36,15 @@ paths:
               $ref: '#/components/schemas/User'
       responses:
         '201':
-          description: 'return integer. 1: success'
+          description: 'return the saved user'
           content:
             application/json:
               schema:
-                type: integer
+                $ref: '#/components/schemas/User'
         '400':
           description: Invalid user supplied
+        '409':
+          description: Duplicate user Id
         '422':
           description: Validation errors
           content:
@@ -57,13 +59,14 @@ paths:
     get:
       tags:
         - user
-      summary: Get user by user ID
-      description: 'Get a user by ID'
+      summary: Get user by user Id
+      description: 'Get a user by Id'
       operationId: getUserById
       parameters:
         - name: userId
           in: path
           description: 'The userId that needs to be fetched. Use spiderman for testing. '
+          example: wolverine
           required: true
           schema:
             type: string
@@ -90,6 +93,7 @@ paths:
         - name: userId
           in: path
           description: user that need to be updated
+          example: wolverine
           required: true
           schema:
             type: string
@@ -101,19 +105,17 @@ paths:
               $ref: '#/components/schemas/User'
       responses:
         '200':
-          description: 'return integer. 1: success'
+          description: 'return the saved user'
           content:
             application/json:
               schema:
-                type: integer
+                $ref: '#/components/schemas/User'
         '400':
           description: Invalid user supplied
         '404':
-          description: User not found. Return 0
-          content:
-            application/json:
-              schema:
-                type: integer
+          description: User not found
+        '409':
+          description: Conflict between multiple simultaneous updates
         '422':
           description: Validation errors
           content:
@@ -134,6 +136,7 @@ paths:
         - name: userId
           in: path
           description: user that need to be update partially
+          example: wolverine
           required: true
           schema:
             type: string
@@ -145,19 +148,17 @@ paths:
               $ref: '#/components/schemas/User'
       responses:
         '200':
-          description: 'return integer. 1: success'
+          description: 'return the saved user'
           content:
             application/json:
               schema:
-                type: integer
+                $ref: '#/components/schemas/User'
         '400':
           description: Invalid user supplied
         '404':
-          description: User not found. Return 0
-          content:
-            application/json:
-              schema:
-                type: integer
+          description: User not found
+        '409':
+          description: Conflict between multiple simultaneous updates
         '422':
           description: Validation errors
           content:
@@ -172,12 +173,13 @@ paths:
       tags:
         - user
       summary: Delete user
-      description: Delete a user by ID.
+      description: Delete a user by Id.
       operationId: deleteUser
       parameters:
         - name: userId
           in: path
           description: The userId that needs to be deleted
+          example: wolverine
           required: true
           schema:
             type: string
@@ -191,11 +193,7 @@ paths:
         '400':
           description: Invalid userId supplied
         '404':
-          description: User not found. Return 0
-          content:
-            application/json:
-              schema:
-                type: integer
+          description: User not found
         '500':
           description: Internal Server Error
   /users/search:
@@ -203,7 +201,7 @@ paths:
       tags:
         - user
       summary: Search users by userId or username or email or phone or min of  dateOfBirth or max of  dateOfBirth
-      description: 'Get a user by ID'
+      description: 'Search users by userId or username or email or phone or min of  dateOfBirth or max of  dateOfBirth'
       operationId: serachUsers
       parameters:
         - name: page

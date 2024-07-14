@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/core-go/config"
-	"github.com/core-go/core"
-	"github.com/core-go/log"
+	svr "github.com/core-go/core/server"
 	mid "github.com/core-go/log/middleware"
+	"github.com/core-go/log/zap"
 	"github.com/gorilla/mux"
 	"net/http"
 
@@ -34,8 +34,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(core.ServerInfo(conf.Server))
-	if err = http.ListenAndServe(core.Addr(conf.Server.Port), r); err != nil {
+	fmt.Println(svr.ServerInfo(conf.Server))
+	if err = http.ListenAndServe(svr.Addr(conf.Server.Port), r); err != nil {
 		fmt.Println(err.Error())
 	}
 }
