@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/core-go/config v1.0.1
 	github.com/core-go/core v0.6.10
-	github.com/core-go/elasticsearch v0.5.1
+	github.com/core-go/elasticsearch v1.0.0
 	github.com/core-go/health v1.0.1
 	github.com/core-go/log v1.0.5
 	github.com/core-go/search v1.0.7
