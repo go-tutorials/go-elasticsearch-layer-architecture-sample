@@ -1,5 +1,5 @@
 server:
-  name: go-elasticsearch-rest-api
+  name: go-elasticsearch-sample
   port: 8080
 
 elastic_search:

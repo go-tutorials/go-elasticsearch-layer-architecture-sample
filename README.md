@@ -1,10 +1,10 @@
-# go-elasticsearch-layer-architecture-sample
+# go-elasticsearch-sample
 
 ## How to run
 #### Clone the repository
 ```shell
-git clone https://github.com/go-tutorials/go-elasticsearch-layer-architecture-sample.git
-cd go-elasticsearch-layer-architecture-sample
+git clone https://github.com/go-tutorials/go-elasticsearch-sample.git
+cd go-elasticsearch-sample
 ```
 
 #### To run the application
